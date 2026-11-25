@@ -1,87 +1,223 @@
 
 # SOC Lab — Security Operations Center
 
-Laboratório prático de operações de segurança (SOC), desenvolvido para estudar monitoramento de eventos, análise de tráfego HTTP, integração de Threat Intelligence e utilização do Splunk Enterprise como SIEM.
+![Splunk](https://img.shields.io/badge/SIEM-Splunk-000000?logo=splunk)
+![Python](https://img.shields.io/badge/Python-3.x-blue?logo=python)
+![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker)
+![Security](https://img.shields.io/badge/Focus-Cybersecurity-red)
 
-O projeto utiliza uma aplicação OWASP Juice Shop para gerar eventos reais de acesso, que são coletados pelo Nginx, encaminhados ao Splunk e analisados por meio de consultas SPL e dashboards.
+## Sobre o projeto
+
+O SOC Lab é um laboratório prático desenvolvido para simular algumas das atividades realizadas em um Security Operations Center (SOC), com foco em monitoramento de eventos, centralização de logs, análise de requisições HTTP e enriquecimento de informações por meio de Threat Intelligence.
+
+A proposta do projeto é construir um ambiente no qual seja possível gerar eventos a partir de uma aplicação web, coletar esses registros, encaminhá-los para uma plataforma SIEM e utilizar consultas e dashboards para visualizar e analisar as informações.
+
+Como aplicação de laboratório, foi utilizada a OWASP Juice Shop, executada em um container Docker. O tráfego gerado durante a utilização da aplicação é registrado pelo Nginx em formato JSON e encaminhado ao Splunk Enterprise por meio de um script desenvolvido em Python.
+
+Além da coleta de eventos, o laboratório possui uma integração automatizada com as plataformas VirusTotal e AbuseIPDB. Essa integração permite enriquecer informações sobre endereços IP públicos identificados nos acessos à aplicação, acrescentando indicadores de reputação aos eventos centralizados no Splunk.
+
+O objetivo é aproximar o aprendizado de conceitos utilizados em operações de segurança, desde a geração e coleta de eventos até sua análise e visualização.
 
 ---
 
-## Objetivos do projeto
+## Objetivos
 
-- Implementar um ambiente de monitoramento utilizando Splunk Enterprise.
-- Coletar e centralizar logs de uma aplicação web.
-- Analisar requisições HTTP e identificar comportamentos potencialmente suspeitos.
+O desenvolvimento do laboratório tem como objetivos:
+
+- Implementar uma plataforma SIEM utilizando Splunk Enterprise.
+- Construir um ambiente de coleta e centralização de logs.
+- Monitorar requisições HTTP de uma aplicação web.
+- Desenvolver scripts Python para automação e integração de eventos.
 - Integrar fontes externas de Threat Intelligence.
-- Automatizar o enriquecimento de endereços IP.
-- Desenvolver consultas SPL e dashboards para visualização dos eventos.
+- Realizar enriquecimento de informações sobre IPs públicos.
+- Utilizar SQLite para armazenar resultados e evitar consultas repetidas.
+- Desenvolver pesquisas SPL para análise dos eventos.
+- Criar dashboards para acompanhamento das informações coletadas.
+
+---
 
 ## Arquitetura do laboratório
 
-O ambiente é composto por duas máquinas virtuais Ubuntu Server executadas no VirtualBox e conectadas por meio do Tailscale.
+O ambiente foi construído utilizando duas máquinas virtuais Ubuntu Server, executadas no VirtualBox e conectadas por meio do Tailscale.
 
-| Máquina | Responsabilidade |
-|---|---|
-| SOC-LAB-Ubuntu | Splunk Enterprise e centralização dos eventos |
-| juicelab | OWASP Juice Shop, Docker, Nginx e scripts Python |
+Cada máquina possui uma responsabilidade específica dentro da arquitetura.
 
-### Fluxo de funcionamento
+### 1. Máquina SOC-LAB-Ubuntu — SIEM
 
-1. A aplicação OWASP Juice Shop recebe as requisições HTTP.
-2. O Nginx registra os acessos em formato JSON.
-3. O script `forwarder.py` encaminha os eventos ao Splunk por meio do HTTP Event Collector (HEC).
-4. O script `auto_threat_intel.py` monitora os acessos e identifica IPs públicos.
-5. O script `threat_intel.py` consulta as APIs VirusTotal e AbuseIPDB.
-6. O módulo `ti_cache.py` armazena os resultados em SQLite por 24 horas.
-7. Os eventos e resultados são centralizados no Splunk para análise e visualização.
+Esta máquina executa o Splunk Enterprise, responsável por receber, centralizar, indexar e disponibilizar os eventos coletados pelo laboratório.
 
-## Tecnologias utilizadas
+O Splunk recebe informações de duas fontes principais:
 
-| Tecnologia | Aplicação |
-|---|---|
-| Splunk Enterprise | SIEM e análise de eventos |
-| OWASP Juice Shop | Aplicação web para geração de tráfego |
-| Docker | Execução da aplicação |
-| Nginx | Proxy reverso e coleta de logs HTTP |
-| Python 3 | Automação e integração de eventos |
-| SQLite | Armazenamento temporário de resultados |
-| VirusTotal | Enriquecimento de Threat Intelligence |
-| AbuseIPDB | Análise de reputação de IPs |
-| Tailscale | Conectividade entre as máquinas virtuais |
-| VirtualBox | Virtualização do laboratório |
-| SPL | Consultas e análise de eventos no Splunk |
+- Eventos HTTP gerados pelo Nginx.
+- Eventos de enriquecimento de Threat Intelligence enviados pelos scripts Python.
 
-## Threat Intelligence
+O encaminhamento dos dados é realizado utilizando o HTTP Event Collector (HEC), permitindo que aplicações externas enviem eventos diretamente à plataforma.
 
-O laboratório possui integração com duas fontes de inteligência de ameaças:
+### 2. Máquina juicelab — Aplicação e coleta
 
-**VirusTotal**
+Esta máquina concentra os componentes responsáveis pela geração, coleta e processamento dos eventos.
+
+**OWASP Juice Shop**
+
+Aplicação web utilizada como ambiente de testes. Durante a navegação, são geradas requisições HTTP que permitem observar diferentes métodos, rotas acessadas, códigos de resposta e informações dos clientes.
+
+**Docker**
+
+Responsável por executar a aplicação Juice Shop em um container isolado.
+
+**Nginx**
+
+Atua como proxy reverso da aplicação e registra as requisições recebidas em arquivos de log estruturados em JSON.
+
+Entre as informações registradas estão:
+
+- Endereço IP encaminhado.
+- Método HTTP.
+- URI requisitada.
+- Código de resposta.
+- User-Agent.
+- Tempo de processamento da requisição.
+
+**Scripts Python**
+
+Realizam o monitoramento dos arquivos de log, encaminhamento dos eventos ao Splunk e integração com as plataformas de Threat Intelligence.
+
+---
+
+## Fluxo de processamento dos eventos
+
+O funcionamento do laboratório ocorre por meio de um fluxo integrado entre a aplicação, os mecanismos de coleta, os scripts Python e o SIEM.
+
+1. Um usuário acessa a aplicação OWASP Juice Shop.
+2. O Nginx recebe as requisições e registra os eventos em formato JSON.
+3. O `forwarder.py` monitora o arquivo de log e encaminha novos registros ao Splunk utilizando HEC.
+4. O `auto_threat_intel.py` monitora os acessos e identifica endereços IP públicos.
+5. Quando um novo IP elegível é identificado, o processo verifica se já existe uma investigação válida no cache.
+6. Caso não exista um resultado válido, o `threat_intel.py` consulta as APIs VirusTotal e AbuseIPDB.
+7. Os resultados das consultas são consolidados e enviados ao Splunk.
+8. O `ti_cache.py` armazena os resultados no banco SQLite, evitando consultas repetidas durante o período de validade de 24 horas.
+9. Os eventos ficam disponíveis no Splunk para pesquisas SPL, análise e visualização nos dashboards.
+
+### Visão simplificada da arquitetura
+
+```text
+              USUÁRIO
+                 |
+                 v
+          OWASP JUICE SHOP
+              (Docker)
+                 |
+                 v
+               NGINX
+          Logs em formato JSON
+                 |
+          +------+------+
+          |             |
+          v             v
+     forwarder.py   auto_threat_intel.py
+          |             |
+          |             v
+          |        threat_intel.py
+          |             |
+          |       +-----+------+
+          |       |            |
+          |       v            v
+          |   VirusTotal   AbuseIPDB
+          |       |            |
+          |       +-----+------+
+          |             |
+          |          SQLite
+          |          (Cache)
+          |             |
+          +------+------+
+                 |
+                 v
+          SPLUNK ENTERPRISE
+                 |
+                 v
+          CONSULTAS SPL
+                 |
+                 v
+           DASHBOARDS SOC
+```
+
+---
+
+## Integração de Threat Intelligence
+
+Uma das funcionalidades implementadas no laboratório é o enriquecimento automatizado de endereços IP públicos por meio de duas plataformas externas.
+
+### VirusTotal
+
+A integração utiliza a API do VirusTotal para consultar informações de análise de endereços IP.
+
+Entre os indicadores utilizados estão:
+
 - Quantidade de detecções maliciosas.
-- Resultados de análise de reputação.
-- Indicadores retornados pela plataforma.
+- Quantidade de detecções inofensivas.
+- Resultados não detectados.
+- Classificações suspeitas.
 
-**AbuseIPDB**
-- Pontuação de confiança de abuso.
+### AbuseIPDB
+
+A integração utiliza a API do AbuseIPDB para consultar informações relacionadas ao histórico de abuso de endereços IP.
+
+Entre os dados retornados estão:
+
+- Abuse Confidence Score.
 - Quantidade de denúncias.
-- País de origem e informações do provedor.
+- Código do país.
+- Provedor de Internet (ISP).
 
-Os resultados são enviados ao Splunk para centralização e visualização.
+### Cache SQLite
 
-O cache SQLite evita consultas repetidas durante o período de validade de 24 horas.
+Para evitar consultas repetidas às APIs, foi implementado um mecanismo de cache utilizando SQLite.
 
-## Dashboards e monitoramento
+Os resultados são armazenados localmente por 24 horas. Quando um endereço IP já possui uma investigação válida, o sistema reutiliza os dados armazenados em vez de realizar novas consultas.
 
-O Splunk é utilizado para visualizar e analisar:
+Esse mecanismo ajuda a reduzir chamadas desnecessárias às APIs e otimizar o processamento das investigações.
 
-- Requisições HTTP.
-- Endereços IP de origem.
-- Métodos e códigos de resposta HTTP.
-- Rotas acessadas na aplicação.
-- Informações de geolocalização.
-- Resultados de Threat Intelligence.
-- Indicadores de atividades potencialmente suspeitas.
+---
 
-## Evidências visuais
+## Scripts desenvolvidos
+
+Os scripts Python são responsáveis pela comunicação entre os componentes do laboratório.
+
+| Script | Responsabilidade |
+|---|---|
+| `forwarder.py` | Monitora os logs do Nginx e encaminha novos eventos HTTP ao Splunk via HEC. |
+| `auto_threat_intel.py` | Monitora os acessos e identifica automaticamente IPs públicos para enriquecimento. |
+| `threat_intel.py` | Consulta VirusTotal e AbuseIPDB, consolida os resultados e envia os eventos ao Splunk. |
+| `ti_cache.py` | Gerencia o armazenamento e a validade dos resultados no SQLite. |
+
+Os códigos e suas explicações estão disponíveis na pasta [`scripts/`](scripts/).
+
+---
+
+## Monitoramento e análise no Splunk
+
+O Splunk Enterprise funciona como o ponto central de análise do laboratório.
+
+Os eventos recebidos são utilizados em pesquisas SPL e visualizações no Dashboard Studio.
+
+As análises desenvolvidas incluem:
+
+- Monitoramento de requisições HTTP.
+- Volume de acessos registrados.
+- Distribuição dos métodos HTTP.
+- Análise dos códigos de resposta.
+- Identificação de endereços IP de origem.
+- Visualização geográfica de IPs investigados.
+- Indicadores de reputação do VirusTotal.
+- Indicadores de abuso do AbuseIPDB.
+
+As consultas SPL utilizadas no laboratório estão documentadas em [`consultas/consultas-spl.md`](consultas/consultas-spl.md).
+
+---
+
+## Evidências do laboratório
+
+As imagens abaixo apresentam registros do ambiente e das integrações implementadas.
 
 ### Splunk Enterprise
 
@@ -91,17 +227,38 @@ O Splunk é utilizado para visualizar e analisar:
 
 ![Dashboard SOC](screenshots/soc-dashboard.png)
 
-### OWASP Juice Shop
+### Aplicação OWASP Juice Shop
 
 ![OWASP Juice Shop](screenshots/juice-shop.png)
 
-### Eventos HTTP
+### Eventos HTTP coletados
 
 ![Eventos HTTP](screenshots/http-events.png)
 
-### Threat Intelligence
+### Integração de Threat Intelligence
 
 ![Threat Intelligence](screenshots/threat-intelligence.png)
+
+---
+
+## Tecnologias utilizadas
+
+| Tecnologia | Utilização |
+|---|---|
+| Splunk Enterprise | SIEM, indexação e análise de eventos |
+| SPL | Pesquisas e análise de dados |
+| OWASP Juice Shop | Aplicação web para geração de eventos |
+| Docker | Containerização da aplicação |
+| Nginx | Proxy reverso e coleta de logs |
+| Python 3 | Automação e integração |
+| SQLite | Cache de investigações |
+| VirusTotal API | Enriquecimento de Threat Intelligence |
+| AbuseIPDB API | Consulta de reputação de IPs |
+| Tailscale | Conectividade entre máquinas |
+| VirtualBox | Ambiente de virtualização |
+| Ubuntu Server | Sistemas operacionais do laboratório |
+
+---
 
 ## Estrutura do repositório
 
@@ -128,28 +285,45 @@ SOC-Lab-Security-Operations-Center/
     └── threat-intelligence.png
 ```
 
-## Segurança
+---
 
-Este laboratório foi desenvolvido em ambiente controlado para fins educacionais.
+## Segurança do ambiente
 
-- Tokens HEC e chaves de API não devem ser publicados.
-- Arquivos de configuração com credenciais devem permanecer fora do repositório.
-- Bancos de dados locais não devem ser enviados ao GitHub.
-- O Splunk não deve ser exposto diretamente à internet sem as proteções adequadas.
+O laboratório foi desenvolvido para fins educacionais e testes controlados.
 
-## Aprendizados
+Algumas medidas adotadas:
 
-O desenvolvimento deste projeto permitiu praticar conceitos de:
+- Comunicação entre as máquinas por meio do Tailscale.
+- Splunk mantido em ambiente privado, sem exposição direta de sua interface à internet.
+- Credenciais e chaves de API armazenadas em arquivos locais, fora do repositório público.
+- Separação dos componentes de coleta, processamento e análise.
 
-- SIEM e centralização de logs.
-- Monitoramento de aplicações web.
-- Análise de eventos e tráfego HTTP.
-- Consultas SPL.
-- Integração de APIs.
-- Threat Intelligence.
-- Automação com Python.
-- Enriquecimento e correlação de eventos de segurança.
+As configurações e credenciais reais do ambiente não fazem parte deste repositório.
 
 ---
 
-**Projeto desenvolvido para fins de estudo e construção de portfólio em Segurança da Informação e operações SOC.**
+## Conhecimentos praticados
+
+O desenvolvimento deste projeto proporcionou experiência prática com:
+
+- Administração de ambientes Linux.
+- Configuração e operação do Splunk Enterprise.
+- Conceitos de SIEM e centralização de logs.
+- Monitoramento de aplicações web.
+- Análise de eventos HTTP.
+- Consultas e manipulação de dados com SPL.
+- Integração de APIs REST.
+- Automação com Python.
+- Threat Intelligence e enriquecimento de IPs.
+- Armazenamento de dados com SQLite.
+- Virtualização, Docker e conectividade entre ambientes.
+
+---
+
+## Finalidade
+
+Este projeto faz parte dos meus estudos práticos em Segurança da Informação, com foco em monitoramento, análise de eventos e operações SOC.
+
+A proposta é continuar evoluindo o laboratório, adicionando novas fontes de dados, aprimorando as consultas SPL e desenvolvendo novas formas de análise e visualização de eventos de segurança.
+
+**SOC Lab — Security Operations Center**
