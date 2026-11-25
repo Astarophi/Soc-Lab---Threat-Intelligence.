@@ -1,37 +1,38 @@
-# Scripts — SOC Lab
 
-Esta pasta reúne a documentação dos scripts Python desenvolvidos para automatizar processos de coleta, integração e enriquecimento de eventos no laboratório SOC.
+# Scripts do SOC Lab
 
-## Scripts desenvolvidos
+Esta pasta reúne os scripts Python utilizados na integração entre o Nginx, o Splunk Enterprise e as plataformas de Threat Intelligence.
 
-### 1. Forwarder.py
+## Arquivos
 
-Responsável por monitorar os registros de acesso gerados pelo Nginx e encaminhar automaticamente os eventos ao Splunk Enterprise por meio do HTTP Event Collector (HEC).
+| Arquivo | Função |
+|---|---|
+| `forwarder.py` | Monitora o log de acesso do Nginx e encaminha novos eventos ao Splunk via HTTP Event Collector (HEC). |
+| `threat_intel.py` | Realiza consultas de reputação de IP nas APIs VirusTotal e AbuseIPDB e envia os resultados ao Splunk. |
+| `auto_threat_intel.py` | Monitora novos acessos, identifica IPs públicos e inicia automaticamente investigações de Threat Intelligence. |
+| `ti_cache.py` | Gerencia o cache SQLite, armazenando resultados das investigações por 24 horas. |
 
-Principais funções:
-- Leitura dos logs em formato JSON.
-- Encaminhamento automático dos eventos.
-- Integração entre a máquina Juice Lab e o Splunk.
+## Fluxo de funcionamento
 
-### 2. Threat Intelligence
+1. O usuário acessa a aplicação OWASP Juice Shop.
+2. O Nginx registra a requisição em um arquivo JSON.
+3. O `forwarder.py` encaminha os eventos HTTP ao Splunk.
+4. O `auto_threat_intel.py` monitora os acessos e identifica IPs públicos.
+5. O `threat_intel.py` consulta VirusTotal e AbuseIPDB.
+6. O `ti_cache.py` evita consultas repetidas durante o período de validade do cache.
+7. Os resultados são enviados ao Splunk para análise e visualização nos dashboards.
 
-Scripts responsáveis pelo enriquecimento automatizado de endereços IP identificados nos registros da aplicação.
+## Dependências
 
-Integrações utilizadas:
-- VirusTotal.
-- AbuseIPDB.
+- Python 3
+- SQLite
+- Bibliotecas padrão do Python
+- API Key do VirusTotal
+- API Key do AbuseIPDB
+- Splunk HTTP Event Collector (HEC)
 
-Principais funções:
-- Identificação de endereços IP públicos.
-- Consulta de informações de reputação.
-- Enriquecimento dos eventos com dados de Threat Intelligence.
-- Envio dos resultados ao Splunk.
-- Armazenamento em cache SQLite com validade de 24 horas, evitando consultas repetidas.
+## Segurança
 
-## Integração com o Splunk
+As chaves de API, tokens HEC, arquivos de configuração com credenciais e bancos de dados locais não devem ser publicados neste repositório.
 
-Os scripts utilizam o HTTP Event Collector (HEC) para enviar os dados processados ao Splunk, permitindo centralizar as informações e utilizá-las em consultas SPL e dashboards.
-
-## Observação
-
-Os scripts fazem parte de um laboratório pessoal desenvolvido para fins educacionais e de prática em automação, monitoramento e investigação de eventos de segurança.
+Os scripts disponibilizados representam a implementação utilizada no laboratório, com configurações adaptáveis ao ambiente de execução.
